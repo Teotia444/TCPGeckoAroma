@@ -29,7 +29,6 @@ void ConfigMenuClosedCallback() {
 
 OSThread* ct;
 
-
 OSThread* GetMainThread(){
     return ct;
 }
@@ -42,15 +41,22 @@ static void thread_deallocator(OSThread *thread, void *stack)
 
 ON_APPLICATION_START() {
     ct = OSGetCurrentThread();
+    stopSocket(false);
 
     //init memory space for our socket thread
     OSThread* socket = (OSThread*)calloc(1, sizeof(OSThread));
-    int stack_size = 2 * 1024 * 1024;
+    int stack_size = 10 * 1024 * 1024;
     void* stack_addr = (uint8_t*) memalign(8, stack_size) + stack_size;
 
-    //asks wiiu to create a new thread for our socket
-    OSCreateThread(socket, Start, 0, NULL, stack_addr, stack_size, 0x10, OS_THREAD_ATTRIB_AFFINITY_ANY);
+    //asks wiiu to open thread on another core
+    if(!OSCreateThread(socket, Start, 0, NULL, stack_addr, stack_size, 0x10, OS_THREAD_ATTRIB_AFFINITY_ANY)) return;
     OSSetThreadDeallocator(socket, thread_deallocator);
-    OSResumeThread(socket);
     OSDetachThread(socket);
+    OSResumeThread(socket);
+    
 }
+
+ON_APPLICATION_REQUESTS_EXIT(){
+    stopSocket(true);
+}
+

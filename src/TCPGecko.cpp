@@ -14,6 +14,7 @@
 
 //addresses vector for the find command
 std::vector<uint32_t> potentialAddresses;
+bool stop;
 
 struct clientDetails{
       int32_t clientfd;  // client file descriptor
@@ -27,9 +28,17 @@ struct clientDetails{
 
 //Splits the string into a vector
 std::vector<std::string> Split(const std::string& s, const std::string& delimiter) {
+
+
       std::string str = s;
-      std::vector<std::string> tokens;
       size_t pos = 0;
+
+      //if the string terminates with a
+      if((pos = str.find("\n")) != std::string::npos){
+            str = str.substr(0, str.length() - 2);
+      }
+      std::vector<std::string> tokens;
+      
       std::string token;
       while ((pos = str.find(delimiter)) != std::string::npos) {
           token = str.substr(0, pos);
@@ -40,6 +49,10 @@ std::vector<std::string> Split(const std::string& s, const std::string& delimite
       tokens.push_back(str);
   
       return tokens;
+}
+
+void stopSocket(bool v){
+      stop=v;
 }
 
 #pragma region Peek/Poke
@@ -307,7 +320,7 @@ void* Commands(int client, std::string command){
       
       else if(instruction == "pause"){
             //writes a message to the socket so that the client knows the request has been handled
-            const char *message = "ok";
+            const char *message = "ok\n";
             write(client, message, strlen(message));
 
             //suspend the main thread
@@ -317,7 +330,7 @@ void* Commands(int client, std::string command){
       }
 
       else if(instruction == "advance"){
-            const char *message = "ok";
+            const char *message = "ok\n";
             write(client, message, strlen(message));
 
             OSThread* maint = GetMainThread();
@@ -335,7 +348,7 @@ void* Commands(int client, std::string command){
       }
       
       else if(instruction == "resume"){
-            const char *message = "ok";
+            const char *message = "ok\n";
             write(client, message, strlen(message));
 
             //resumes the main thread
@@ -345,7 +358,7 @@ void* Commands(int client, std::string command){
       }
       
       else{
-            const char *message = "Invalid Instruction. You need to use either of the following instructions : \npeek -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) \npoke -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) -v (value:0xFF)\nfind -s (step:first, next, list) -v (value:0xFF)\npause (pauses the main wiiu thread execution)\nresume (resumes the main wiiu thread)\nadvance (advances the wiiu thread by 1 frame)";
+            const char *message = "Invalid Instruction. You need to use either of the following instructions : \npeek -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) \npoke -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) -v (value:0xFF)\nfind -s (step:first, next, list) -v (value:0xFF)\npause (pauses the main wiiu thread execution)\nresume (resumes the main wiiu thread)\nadvance (advances the wiiu thread by 1 frame)\n";
             write(client, message, strlen(message));
             return 0;
       }
@@ -389,7 +402,7 @@ int Start(int argc, const char **argv){
       int sd=0;
       int activity;
 
-      while (true){
+      while (!stop){
             FD_ZERO(&readfds);
             FD_SET(client->serverfd, &readfds);
             maxfd=client->serverfd;
@@ -446,8 +459,10 @@ int Start(int argc, const char **argv){
                   }
             }
       }
-
+      
       close(client->serverfd);
       delete client;
+      stop=false;
       return 0;
+      
 }

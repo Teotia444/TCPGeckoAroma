@@ -45,7 +45,7 @@ ON_APPLICATION_START() {
 
     //init memory space for our socket thread
     OSThread* socket = (OSThread*)calloc(1, sizeof(OSThread));
-    int stack_size = 10 * 1024 * 1024;
+    int stack_size = 3 * 1024 * 1024;
     void* stack_addr = (uint8_t*) memalign(8, stack_size) + stack_size;
 
     //asks wiiu to open thread on another core

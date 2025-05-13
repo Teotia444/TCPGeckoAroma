@@ -112,21 +112,25 @@ void PokeF32(uint32_t addr, float val){
 
 #pragma endregion PeekPoke
 
+void Call(uint32_t addr){
+      ((void(*)(void))addr)();
+}
+
 #pragma region Find Functions
-void StartFindValue16(uint16_t value){
+void StartFindValue32(uint32_t value){
       potentialAddresses.clear();
-      for (uint32_t i = 0x10000000; i < 0x15000000; i++)
+      for (uint32_t i = 0x10000000; i < 0x19000000; i++)
       {
-            if(*((uint16_t *)(uintptr_t)i) == value){
+            if(*((uint32_t *)(uintptr_t)i) == value){
                   potentialAddresses.push_back(i);
             }
       }
 }
-void ContinueFindValue16(uint16_t value){
+void ContinueFindValue32(uint32_t value){
       std::vector<uint32_t> newSet;
       for (uint32_t i = 0; i < potentialAddresses.size(); i++)
       {
-            if(*((uint16_t *)(uintptr_t)potentialAddresses[i]) == value){
+            if(*((uint32_t *)(uintptr_t)potentialAddresses[i]) == value){
                   newSet.push_back(potentialAddresses[i]);
             }
       }
@@ -276,6 +280,136 @@ void* Commands(int client, std::string command){
             write(client, message, strlen(message));
             return 0;
       }
+      
+      else if(instruction == "peekmultiple"){
+            std::vector<std::string> address;
+            std::string type = "";
+
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-t"){
+                        type = args[i+1];
+                  }
+                  if(args[i] == "-a"){
+                        address.emplace_back(args[i+1]);
+                  }
+            }
+
+            //checks for the different arguments
+            if(address.size() == 0){
+                  const char *message = "Instruction is missing address (-a)\n";
+                  write(client, message, strlen(message));
+                  return 0;
+            }
+            if(type == ""){
+                  const char *message = "Instruction is missing type (-t)\n";
+                  write(client, message, strlen(message));
+                  return 0;
+            }
+
+            //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
+            for (size_t i = 0; i < address.size(); i++)
+            {
+                  std::string val = "";
+                  if(type=="u8"){
+                        val = std::to_string(Peek8((uint32_t)strtol(address[i].c_str(), NULL, 0)));
+                  }
+                  else if(type=="u16"){
+                        val = std::to_string(Peek16((uint32_t)strtol(address[i].c_str(), NULL, 0)));
+                  }
+                  else if(type=="u32"){
+                        val = std::to_string(Peek((uint32_t)strtol(address[i].c_str(), NULL, 0)));
+                  }
+                  else if(type=="f32"){
+                        val = std::to_string(PeekF32((uint32_t)strtol(address[i].c_str(), NULL, 0)));
+                  }
+                  else {
+                        const char *message = "Invalid type (-u)\n";
+                        write(client, message, strlen(message));
+                        return 0;
+                  }
+                  //finally, send back our stuff to the client
+                  write(client, (val + "|").c_str(), strlen((val + "|").c_str()));
+            }
+            return 0;
+      }
+
+      else if (instruction == "pokemultiple"){
+            std::vector<std::string> address;
+            std::string type = "";
+            std::vector<std::string> value;
+
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-t"){
+                        type = args[i+1];
+                  }
+                  if(args[i] == "-a"){
+                        address.emplace_back(args[i+1]);
+                  }
+                  if(args[i] == "-v"){
+                        value.emplace_back(args[i+1]);
+                  }
+            }
+            
+            //checks for the different arguments
+            if(address.size() == 0){
+                  const char *message = "Instruction is missing address (-a)\n";
+                  write(client, message, strlen(message));
+                  return 0;
+            }
+            if(type == ""){
+                  const char *message = "Instruction is missing type (-t)\n";
+                  write(client, message, strlen(message));
+                  return 0;
+            }
+            if(value.size() == 0){
+                  const char *message = "Instruction is missing value (-v)\n";
+                  write(client, message, strlen(message));
+                  return 0;
+            }
+
+            for (size_t i = 0; i < address.size(); i++)
+            {
+                  int val = 0;
+                  float valf = 0;  
+
+                  //parse value as int or float (this is kinda ugly ill change it someday)
+                  if(type!="f32"){
+                        val = std::strtol(value[i].c_str(), NULL, 0);
+                  }else{
+                        uint32_t num;
+                        sscanf(value[i].c_str(), "%x", &num);
+                        valf = *((float*)&num);
+                  }
+
+                  //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
+                  if(type=="u8"){
+                        Poke8((uint32_t)strtol(address[i].c_str(), NULL, 0), (uint8_t)val);
+                  }
+                  else if(type=="u16"){
+                        Poke16((uint32_t)strtol(address[i].c_str(), NULL, 0), (uint16_t)val);
+                  }
+                  else if(type=="u32"){
+                        Poke((uint32_t)strtol(address[i].c_str(), NULL, 0), (uint32_t)val);
+                  }
+                  else if(type=="f32"){
+                        PokeF32((uint32_t)strtol(address[i].c_str(), NULL, 0), valf);
+                  }
+                  else {
+                        const char *message = "Invalid type (-u)\n";
+                        write(client, message, strlen(message));
+                        return 0;
+                  }
+
+                  //writes a message to the socket so that the client knows the request has been handled
+                  char const *message = "ok\n";
+                  write(client, message, strlen(message));
+            }
+            return 0;
+      }
 
       else if(instruction == "find"){
             std::string value = "";
@@ -296,18 +430,18 @@ void* Commands(int client, std::string command){
             if(step == "first"){
                   uint32_t val;
                   val = std::strtol(value.c_str(), NULL, 0);
-                  StartFindValue16(val);
+                  StartFindValue32(val);
             }
             else if (step == "next"){
                   uint32_t val;
                   val = std::strtol(value.c_str(), NULL, 0);
-                  ContinueFindValue16(val);
+                  ContinueFindValue32(val);
             }
             //if we dont recognize the step we just print out the array
             else{
                   for (uint32_t i = 0; i < potentialAddresses.size(); i++)
                   {
-                        char const *message = std::to_string(potentialAddresses[i]).c_str();
+                        char const *message = (std::to_string(potentialAddresses[i]) + "\n").c_str();
                         write(client, message, strlen(message));
                   }
                   return 0;
@@ -354,6 +488,24 @@ void* Commands(int client, std::string command){
             //resumes the main thread
             OSThread* maint = GetMainThread();
             OSResumeThread(maint);
+            return 0;
+      }
+      else if(instruction == "call"){
+            std::string addr = "";
+            
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-a"){
+                        addr = args[i+1];
+                  }
+            }
+
+            uint32_t val;
+            val = std::strtol(addr.c_str(), NULL, 0);
+            Call(val);
+            const char *message = "ok\n";
+            write(client, message, strlen(message));
             return 0;
       }
       

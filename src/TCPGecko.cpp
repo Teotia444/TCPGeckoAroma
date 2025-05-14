@@ -308,6 +308,8 @@ void* Commands(int client, std::string command){
                   return 0;
             }
 
+            std::string message = "";
+
             //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
             for (size_t i = 0; i < address.size(); i++)
             {
@@ -329,9 +331,10 @@ void* Commands(int client, std::string command){
                         write(client, message, strlen(message));
                         return 0;
                   }
-                  //finally, send back our stuff to the client
-                  write(client, (val + "|").c_str(), strlen((val + "|").c_str()));
+                  message += val + "|";
             }
+            //finally, send back our stuff to the client
+            write(client, message.c_str(), strlen(message.c_str()));
             return 0;
       }
 
@@ -403,11 +406,10 @@ void* Commands(int client, std::string command){
                         write(client, message, strlen(message));
                         return 0;
                   }
-
-                  //writes a message to the socket so that the client knows the request has been handled
-                  char const *message = "ok\n";
-                  write(client, message, strlen(message));
             }
+            //writes a message to the socket so that the client knows the request has been handled
+            char const *message = "ok\n";
+            write(client, message, strlen(message));
             return 0;
       }
 
@@ -490,6 +492,7 @@ void* Commands(int client, std::string command){
             OSResumeThread(maint);
             return 0;
       }
+      
       else if(instruction == "call"){
             std::string addr = "";
             
@@ -518,6 +521,7 @@ void* Commands(int client, std::string command){
 
 int Start(int argc, const char **argv){
       NotificationModule_InitLibrary();
+      
       auto client = new clientDetails();
 
       //init server socket

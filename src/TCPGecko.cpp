@@ -11,10 +11,12 @@
 #include <thread>
 #include <map>
 #include <notifications/notifications.h>
+#include <gx2/draw.h>
 
 //addresses vector for the find command
 std::vector<uint32_t> potentialAddresses;
 bool stop;
+NotificationModuleHandle currentText;
 
 struct clientDetails{
       int32_t clientfd;  // client file descriptor
@@ -28,7 +30,6 @@ struct clientDetails{
 
 //Splits the string into a vector
 std::vector<std::string> Split(const std::string& s, const std::string& delimiter) {
-
 
       std::string str = s;
       size_t pos = 0;
@@ -512,6 +513,56 @@ void* Commands(int client, std::string command){
             return 0;
       }
       
+      else if(instruction == "drawtext"){
+            std::string text = "";
+            uint8_t r = 0;
+            uint8_t g = 0;
+            uint8_t b = 0;
+            uint8_t a = 0;
+
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-text"){
+                        int j = i + 1;
+                        text += args[j];
+                        text.erase(0, 1);
+
+                        if(args[j].back() != ')'){
+                              j++;
+                              while(args[j].back() != ')' && j < args.size()){
+                                    text += " ";
+                                    text += args[j];
+                                    j++;
+                              }
+                              text += " ";
+                              text += args[j];
+                        }
+
+                        text.pop_back();
+                  }
+
+                  if(args[i] == "-r"){
+                        r = std::stoi(args[i+1]);
+                  }
+                  if(args[i] == "-g"){
+                        g = std::stoi(args[i+1]);
+                  }
+                  if(args[i] == "-b"){
+                        b = std::stoi(args[i+1]);
+                  }
+                  if(args[i] == "-a"){
+                        a = std::stoi(args[i+1]);
+                  }
+            }
+
+            NotificationModule_UpdateDynamicNotificationText(currentText, text.c_str());
+            NotificationModule_UpdateDynamicNotificationTextColor(currentText, _NMColor{.r = r, .g = g, .b = b, .a = a});
+            const char *message = "ok\n";
+            write(client, message, strlen(message));
+            return 0;
+      }
+
       else{
             const char *message = "Invalid Instruction. You need to use either of the following instructions : \npeek -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) \npoke -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) -v (value:0xFF)\nfind -s (step:first, next, list) -v (value:0xFF)\npause (pauses the main wiiu thread execution)\nresume (resumes the main wiiu thread)\nadvance (advances the wiiu thread by 1 frame)\n";
             write(client, message, strlen(message));
@@ -521,6 +572,11 @@ void* Commands(int client, std::string command){
 
 int Start(int argc, const char **argv){
       NotificationModule_InitLibrary();
+      if (NotificationModule_AddDynamicNotificationEx("", &currentText, {255, 255, 255, 255}, {255, 255, 255, 0}, nullptr, nullptr, false) != NOTIFICATION_MODULE_RESULT_SUCCESS) {
+            currentText = 0;
+      }
+
+
       
       auto client = new clientDetails();
 
@@ -592,7 +648,9 @@ int Start(int argc, const char **argv){
                   
                   //adding client to list
                   client->clientList.push_back(client->clientfd);
-                  NotificationModule_AddInfoNotification("client connected");
+                  //NotificationModule_UpdateDynamicNotificationText(*currentText, "text.c_str()");
+                  
+                  
             }
 
             //for storing the recive message
@@ -606,12 +664,13 @@ int Start(int argc, const char **argv){
                               close(sd);
                               //remove the client from the list 
                               client->clientList.erase(client->clientList.begin()+i);
-                              NotificationModule_AddInfoNotification("client disconnected");
+                              //NotificationModule_AddInfoNotification("client disconnected");
                         }else{
                               std::thread t1(Commands, client->clientList[i], (std::string)message);
                               t1.detach();
                         }
                         memset(message, 0, 1024);
+                        
                   }
             }
       }

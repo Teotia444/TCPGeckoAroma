@@ -35,11 +35,13 @@ OSThread* GetMainThread(){
 
 static void thread_deallocator(OSThread *thread, void *stack)
 {
+    
     free(stack);
     free(thread);
 }
 
 ON_APPLICATION_START() {
+    
     ct = OSGetCurrentThread();
     stopSocket(false);
 
@@ -59,4 +61,6 @@ ON_APPLICATION_START() {
 ON_APPLICATION_REQUESTS_EXIT(){
     stopSocket(true);
 }
+
+
 

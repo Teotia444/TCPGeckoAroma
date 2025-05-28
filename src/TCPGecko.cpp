@@ -13,12 +13,15 @@
 #include <notifications/notifications.h>
 #include <gx2/draw.h>
 
+
+
 //addresses vector for the find command
 std::vector<uint32_t> potentialAddresses;
 bool stop;
 NotificationModuleHandle currentText;
 
 struct clientDetails{
+      
       int32_t clientfd;  // client file descriptor
       int32_t serverfd;  // server file descriptor
       std::vector<int> clientList; // for storing all the client fd
@@ -30,10 +33,10 @@ struct clientDetails{
 
 //Splits the string into a vector
 std::vector<std::string> Split(const std::string& s, const std::string& delimiter) {
-
+      
       std::string str = s;
       size_t pos = 0;
-
+      
       //if the string terminates with a
       if((pos = str.find("\n")) != std::string::npos){
             str = str.substr(0, str.length() - 2);
@@ -245,12 +248,12 @@ void* Commands(int client, std::string command){
                   return 0;
             }
 
-            int val = 0;
+            uint val = 0;
             float valf = 0;  
 
             //parse value as int or float (this is kinda ugly ill change it someday)
             if(type!="f32"){
-                  val = std::strtol(value.c_str(), NULL, 0);
+                  val = std::strtoul(value.c_str(), NULL, 0);
             }else{
                   uint32_t num;
                   sscanf(value.c_str(), "%x", &num);
@@ -259,16 +262,16 @@ void* Commands(int client, std::string command){
 
             //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
             if(type=="u8"){
-                  Poke8((uint32_t)strtol(address.c_str(), NULL, 0), (uint8_t)val);
+                  Poke8((uint32_t)strtoul(address.c_str(), NULL, 0), (uint8_t)val);
             }
             else if(type=="u16"){
-                  Poke16((uint32_t)strtol(address.c_str(), NULL, 0), (uint16_t)val);
+                  Poke16((uint32_t)strtoul(address.c_str(), NULL, 0), (uint16_t)val);
             }
             else if(type=="u32"){
-                  Poke((uint32_t)strtol(address.c_str(), NULL, 0), (uint32_t)val);
+                  Poke((uint32_t)strtoul(address.c_str(), NULL, 0), (uint32_t)val);
             }
             else if(type=="f32"){
-                  PokeF32((uint32_t)strtol(address.c_str(), NULL, 0), valf);
+                  PokeF32((uint32_t)strtoul(address.c_str(), NULL, 0), valf);
             }
             else {
                   const char *message = "Invalid type (-u)\n";
@@ -377,30 +380,31 @@ void* Commands(int client, std::string command){
 
             for (size_t i = 0; i < address.size(); i++)
             {
-                  int val = 0;
+                  uint val = 0;
                   float valf = 0;  
 
                   //parse value as int or float (this is kinda ugly ill change it someday)
                   if(type!="f32"){
-                        val = std::strtol(value[i].c_str(), NULL, 0);
+                        val = std::strtoul(value[i].c_str(), NULL, 0);
                   }else{
                         uint32_t num;
                         sscanf(value[i].c_str(), "%x", &num);
                         valf = *((float*)&num);
+                        
                   }
 
                   //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
                   if(type=="u8"){
-                        Poke8((uint32_t)strtol(address[i].c_str(), NULL, 0), (uint8_t)val);
+                        Poke8((uint32_t)strtoul(address[i].c_str(), NULL, 0), (uint8_t)val);
                   }
                   else if(type=="u16"){
-                        Poke16((uint32_t)strtol(address[i].c_str(), NULL, 0), (uint16_t)val);
+                        Poke16((uint32_t)strtoul(address[i].c_str(), NULL, 0), (uint16_t)val);
                   }
                   else if(type=="u32"){
-                        Poke((uint32_t)strtol(address[i].c_str(), NULL, 0), (uint32_t)val);
+                        Poke((uint32_t)strtoul(address[i].c_str(), NULL, 0), (uint32_t)val);
                   }
                   else if(type=="f32"){
-                        PokeF32((uint32_t)strtol(address[i].c_str(), NULL, 0), valf);
+                        PokeF32((uint32_t)strtoul(address[i].c_str(), NULL, 0), valf);
                   }
                   else {
                         const char *message = "Invalid type (-u)\n";
@@ -558,6 +562,12 @@ void* Commands(int client, std::string command){
 
             NotificationModule_UpdateDynamicNotificationText(currentText, text.c_str());
             NotificationModule_UpdateDynamicNotificationTextColor(currentText, _NMColor{.r = r, .g = g, .b = b, .a = a});
+            
+            if(a == 0 || text == "" || (a == 2 && r == 0 && g == 0 && b == 255)){
+                  NotificationModule_UpdateDynamicNotificationText(currentText, ".");
+                  NotificationModule_UpdateDynamicNotificationTextColor(currentText, _NMColor{255, 0, 0, 2});
+            }
+            
             const char *message = "ok\n";
             write(client, message, strlen(message));
             return 0;
@@ -572,12 +582,10 @@ void* Commands(int client, std::string command){
 
 int Start(int argc, const char **argv){
       NotificationModule_InitLibrary();
-      if (NotificationModule_AddDynamicNotificationEx("", &currentText, {255, 255, 255, 255}, {255, 255, 255, 0}, nullptr, nullptr, false) != NOTIFICATION_MODULE_RESULT_SUCCESS) {
+      if (NotificationModule_AddDynamicNotificationEx(".", &currentText, {0, 0, 255, 2}, {255, 255, 255, 0}, nullptr, nullptr, false) != NOTIFICATION_MODULE_RESULT_SUCCESS) {
             currentText = 0;
       }
 
-
-      
       auto client = new clientDetails();
 
       //init server socket
@@ -647,6 +655,7 @@ int Start(int argc, const char **argv){
                   }
                   
                   //adding client to list
+                  NotificationModule_UpdateDynamicNotificationTextColor(currentText, {255, 255, 255, 2});
                   client->clientList.push_back(client->clientfd);
                   //NotificationModule_UpdateDynamicNotificationText(*currentText, "text.c_str()");
                   
@@ -664,6 +673,11 @@ int Start(int argc, const char **argv){
                               close(sd);
                               //remove the client from the list 
                               client->clientList.erase(client->clientList.begin()+i);
+                              NotificationModule_UpdateDynamicNotificationText(currentText, ".");
+                              NotificationModule_UpdateDynamicNotificationTextColor(currentText, {255, 255, 255, 2});
+                              if(client->clientList.size() == 0){
+                                    NotificationModule_UpdateDynamicNotificationTextColor(currentText, {0, 0, 255, 2});
+                              }
                               //NotificationModule_AddInfoNotification("client disconnected");
                         }else{
                               std::thread t1(Commands, client->clientList[i], (std::string)message);

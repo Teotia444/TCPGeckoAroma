@@ -2,6 +2,24 @@
 
 A plugin that allows for basic peek / poke instruction. Comes with other set of commands that are mostly for show.
 The plugin is accessible with a TCP socket (hence, the name) at port 7332 and allows for the following commands:
+
+* `peek -t (type: u8, u16, u32, f32) -a (address: 0xXXXXXXXX)` : peeks an address and interprets as requested type
+* `poke -t (type: u8, u16, u32, f32) -a (address: 0xXXXXXXXX) -v (value: 0xXX)` : pokes an address interpreted as the specified type with the specified value
+* `peekmultiple -t -a -a -a... ` : peeks multiple values using a single request. They will be separated using the pipe (`|`) operator
+
+* `pokemultiple -t -a -v -a -v -a -v... ` : pokes multiple values using a single request.
+
+* `find -s (step:first, next, list) -v (value: 0xFF)` : searches ram for a value in a Cheat Engine style.
+
+* `pause`: pauses the main thread's execution
+
+* `advance`: advances the main thread's execution
+
+* `resume`: resumes the main thread's execution
+
+* `call -a (address: 0xXXXXXXXX)`: branches to an address interpreted as assembly.
+
+* `drawtext -text (quoted text: "example") -r (value: 0xFF) -g (value: 0xFF) -b (value: 0xFF) -a (value: 0xFF)` : displays text in the top left of the screen with the specified colors.
  
 
 ## Installation

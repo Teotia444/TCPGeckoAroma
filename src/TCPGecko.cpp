@@ -1,3 +1,5 @@
+#include "utils/logger.h"
+
 #include <main.h>
 #include <coreinit/filesystem.h>
 #include <vector>
@@ -145,6 +147,7 @@ void ContinueFindValue32(uint32_t value){
 
 //Handles a raw request
 void* Commands(int client, std::string command){
+      DEBUG_FUNCTION_LINE_INFO("Processing command from client %d: %s", client, command.c_str());
       std::vector<std::string> args = Split(command, " ");
       std::string instruction = args[0];
 
@@ -168,16 +171,19 @@ void* Commands(int client, std::string command){
             //checks for the different arguments
             if(address == ""){
                   const char *message = "Instruction is missing address (-a)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(type == ""){
                   const char *message = "Instruction is missing type (-t)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(strtol(address.c_str(), NULL, 0) == 0){
                   const char *message = "Invalid address (-a)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
@@ -198,11 +204,13 @@ void* Commands(int client, std::string command){
             }
             else {
                   const char *message = "Invalid type (-u)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
 
             //finally, send back our stuff to the client
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, val.c_str());
             write(client, val.c_str(), strlen(val.c_str()));
             return 0;
       }
@@ -229,21 +237,25 @@ void* Commands(int client, std::string command){
             //checks for the different arguments
             if(address == ""){
                   const char *message = "Instruction is missing address (-a)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(type == ""){
                   const char *message = "Instruction is missing type (-t)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(type == ""){
                   const char *message = "Instruction is missing value (-v)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(strtol(address.c_str(), NULL, 0) == 0){
                   const char *message = "Invalid address (-a)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
@@ -275,12 +287,14 @@ void* Commands(int client, std::string command){
             }
             else {
                   const char *message = "Invalid type (-u)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
 
             //writes a message to the socket so that the client knows the request has been handled
             char const *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
             return 0;
       }
@@ -303,11 +317,13 @@ void* Commands(int client, std::string command){
             //checks for the different arguments
             if(address.size() == 0){
                   const char *message = "Instruction is missing address (-a)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(type == ""){
                   const char *message = "Instruction is missing type (-t)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
@@ -332,12 +348,14 @@ void* Commands(int client, std::string command){
                   }
                   else {
                         const char *message = "Invalid type (-u)\n";
+                        DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                         write(client, message, strlen(message));
                         return 0;
                   }
                   message += val + "|";
             }
             //finally, send back our stuff to the client
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message.c_str(), strlen(message.c_str()));
             return 0;
       }
@@ -364,16 +382,19 @@ void* Commands(int client, std::string command){
             //checks for the different arguments
             if(address.size() == 0){
                   const char *message = "Instruction is missing address (-a)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(type == ""){
                   const char *message = "Instruction is missing type (-t)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
             if(value.size() == 0){
                   const char *message = "Instruction is missing value (-v)\n";
+                  DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                   write(client, message, strlen(message));
                   return 0;
             }
@@ -408,12 +429,14 @@ void* Commands(int client, std::string command){
                   }
                   else {
                         const char *message = "Invalid type (-u)\n";
+                        DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                         write(client, message, strlen(message));
                         return 0;
                   }
             }
             //writes a message to the socket so that the client knows the request has been handled
             char const *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
             return 0;
       }
@@ -449,12 +472,14 @@ void* Commands(int client, std::string command){
                   for (uint32_t i = 0; i < potentialAddresses.size(); i++)
                   {
                         char const *message = (std::to_string(potentialAddresses[i]) + "\n").c_str();
+                        DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
                         write(client, message, strlen(message));
                   }
                   return 0;
             }
             //writes a message to the socket so that the client knows the request has been handled
             char const *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
             return 0;
       }
@@ -462,6 +487,7 @@ void* Commands(int client, std::string command){
       else if(instruction == "pause"){
             //writes a message to the socket so that the client knows the request has been handled
             const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
 
             //suspend the main thread
@@ -472,6 +498,7 @@ void* Commands(int client, std::string command){
 
       else if(instruction == "advance"){
             const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
 
             OSThread* maint = GetMainThread();
@@ -490,6 +517,7 @@ void* Commands(int client, std::string command){
       
       else if(instruction == "resume"){
             const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
 
             //resumes the main thread
@@ -513,6 +541,7 @@ void* Commands(int client, std::string command){
             val = std::strtol(addr.c_str(), NULL, 0);
             Call(val);
             const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
             return 0;
       }
@@ -569,18 +598,21 @@ void* Commands(int client, std::string command){
             }
             
             const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
             return 0;
       }
 
       else{
             const char *message = "Invalid Instruction. You need to use either of the following instructions : \npeek -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) \npoke -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) -v (value:0xFF)\nfind -s (step:first, next, list) -v (value:0xFF)\npause (pauses the main wiiu thread execution)\nresume (resumes the main wiiu thread)\nadvance (advances the wiiu thread by 1 frame)\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
             return 0;
       }
 }
 
 int Start(int argc, const char **argv){
+      DEBUG_FUNCTION_LINE_INFO("Starting TCPGecko Socket");
       NotificationModule_InitLibrary();
       if (NotificationModule_AddDynamicNotificationEx(".", &currentText, {0, 0, 255, 2}, {255, 255, 255, 0}, nullptr, nullptr, false) != NOTIFICATION_MODULE_RESULT_SUCCESS) {
             currentText = 0;
@@ -622,6 +654,7 @@ int Start(int argc, const char **argv){
       int sd=0;
       int activity;
 
+      DEBUG_FUNCTION_LINE_INFO("Listening for connections on port 7332");
       while (!stop){
             FD_ZERO(&readfds);
             FD_SET(client->serverfd, &readfds);

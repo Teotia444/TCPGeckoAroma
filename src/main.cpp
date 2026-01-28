@@ -1,7 +1,7 @@
 #include "main.h"
 #include "TCPGecko.h"
-
 #include "utils/logger.h"
+
 #include <coreinit/filesystem.h>
 #include <wups.h>
 #include <wups/config_api.h>

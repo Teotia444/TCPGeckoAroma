@@ -40,7 +40,14 @@ static void thread_deallocator(OSThread *thread, void *stack)
     free(thread);
 }
 
+INITIALIZE_PLUGIN() {
+    initLogging();
+    DEBUG_FUNCTION_LINE_INFO("Initialized TCPGecko Plugin");
+}
+
 ON_APPLICATION_START() {
+    initLogging();
+    DEBUG_FUNCTION_LINE_INFO("TCPGecko Plugin Application start");
     
     ct = OSGetCurrentThread();
     stopSocket(false);
@@ -60,6 +67,11 @@ ON_APPLICATION_START() {
 
 ON_APPLICATION_REQUESTS_EXIT(){
     stopSocket(true);
+    deinitLogging();
+}
+
+DEINITIALIZE_PLUGIN() {
+    deinitLogging();
 }
 
 

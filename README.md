@@ -60,13 +60,13 @@ It's possible to use a docker image for building. This way you don't need anythi
 
 ```
 # Build docker image (only needed once)
-docker build . -t example-plugin-builder
+docker build . -t gecko-builder
 
 # make 
-docker run -it --rm -v ${PWD}:/project example-plugin-builder make DEBUG=1
+docker run -it --rm -v ${PWD}:/project gecko-builder make DEBUG=1
 
 # make clean
-docker run -it --rm -v ${PWD}:/project example-plugin-builder make clean
+docker run -it --rm -v ${PWD}:/project gecko-builder make clean
 ```
 
 ## Format the code via docker

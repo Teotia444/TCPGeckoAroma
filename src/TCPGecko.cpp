@@ -1,19 +1,18 @@
 #include "utils/logger.h"
+#include "main.h"
+#include "TCPGecko.h"
 
-#include <main.h>
-#include <coreinit/filesystem.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <stdint.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <sys/unistd.h>
-#include <string.h>
 #include <thread>
-#include <map>
+
 #include <notifications/notifications.h>
-#include <gx2/draw.h>
+#include <utils/CThread.h>
 
 
 
@@ -22,43 +21,27 @@ std::vector<uint32_t> potentialAddresses;
 bool stop;
 NotificationModuleHandle currentText;
 
-struct clientDetails{
-      
-      int32_t clientfd;  // client file descriptor
-      int32_t serverfd;  // server file descriptor
-      std::vector<int> clientList; // for storing all the client fd
-      clientDetails(void){ // initializing the variable
-            this->clientfd=-1;
-            this->serverfd=-1;
-      }
-};
-
 //Splits the string into a vector
 std::vector<std::string> Split(const std::string& s, const std::string& delimiter) {
-      
-      std::string str = s;
-      size_t pos = 0;
-      
-      //if the string terminates with a
-      if((pos = str.find("\n")) != std::string::npos){
-            str = str.substr(0, str.length() - 2);
-      }
-      std::vector<std::string> tokens;
-      
-      std::string token;
-      while ((pos = str.find(delimiter)) != std::string::npos) {
-          token = str.substr(0, pos);
-          tokens.push_back(token);
-          
-          str.erase(0, pos + delimiter.length());
-      }
-      tokens.push_back(str);
-  
-      return tokens;
-}
+    std::string str = s;
+    size_t pos = 0;
+    
+    //if the string terminates with a
+    if((pos = str.find("\n")) != std::string::npos){
+        str = str.substr(0, str.length() - 2);
+    }
+    std::vector<std::string> tokens;
+    
+    std::string token;
+    while ((pos = str.find(delimiter)) != std::string::npos) {
+        token = str.substr(0, pos);
+        tokens.push_back(token);
+        
+        str.erase(0, pos + delimiter.length());
+    }
+    tokens.push_back(str);
 
-void stopSocket(bool v){
-      stop=v;
+    return tokens;
 }
 
 #pragma region Peek/Poke
@@ -67,20 +50,16 @@ uint32_t Peek(uint32_t addr) {
       //casting the address to a pointer and immediatly dereferences it
       uint32_t val = *((uint32_t *)(uintptr_t)addr);
       return val;
-      
 }
-
 
 void Poke(uint32_t addr, uint32_t val){
       //dereference cast of address as pointer then apply value
       *((uint32_t *)(uintptr_t)addr) = val;
 }
 
-
 /*
 All of the next peek/poke functions are pretty useless but like why not 
 */
-
 
 uint16_t Peek16(uint32_t addr) {
       //Peek address
@@ -490,9 +469,7 @@ void* Commands(int client, std::string command){
             DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
 
-            //suspend the main thread
-            OSThread* maint = GetMainThread();
-            OSSuspendThread(maint);
+            OSSuspendThread(mainThread);
             return 0;
       }
 
@@ -501,16 +478,15 @@ void* Commands(int client, std::string command){
             DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
             write(client, message, strlen(message));
 
-            OSThread* maint = GetMainThread();
             //for some reasons the OSSleepTicks work weirdly, this is very hacky and it just so happens that resuming
             //thread twice advances by a frame? idk
-            OSResumeThread(maint);
+            OSResumeThread(mainThread);
             OSSleepTicks(OSTime(1000));
-            OSSuspendThread(maint);
+            OSSuspendThread(mainThread);
 
-            OSResumeThread(maint);
+            OSResumeThread(mainThread);
             OSSleepTicks(OSTime(1000));
-            OSSuspendThread(maint);
+            OSSuspendThread(mainThread);
 
             return 0;
       }
@@ -521,8 +497,7 @@ void* Commands(int client, std::string command){
             write(client, message, strlen(message));
 
             //resumes the main thread
-            OSThread* maint = GetMainThread();
-            OSResumeThread(maint);
+            OSResumeThread(mainThread);
             return 0;
       }
       
@@ -611,7 +586,7 @@ void* Commands(int client, std::string command){
       }
 }
 
-int Start(int argc, const char **argv){
+void Start(CThread* thread, void* arg){
       DEBUG_FUNCTION_LINE_INFO("Starting TCPGecko Socket");
       NotificationModule_InitLibrary();
       if (NotificationModule_AddDynamicNotificationEx(".", &currentText, {0, 0, 255, 2}, {255, 255, 255, 0}, nullptr, nullptr, false) != NOTIFICATION_MODULE_RESULT_SUCCESS) {
@@ -624,14 +599,14 @@ int Start(int argc, const char **argv){
       client->serverfd = socket(AF_INET, SOCK_STREAM, 0);
       if(client->serverfd <= 0){
             delete client;
-            return 1;
+            return;
       }
 
 
       int opt=1;
       if(setsockopt(client->serverfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof opt) <0){
             delete client;
-            return 1;
+            return;
       }
 
       struct sockaddr_in serverAddr;
@@ -641,11 +616,11 @@ int Start(int argc, const char **argv){
 
       if(bind(client->serverfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr))<0){
             delete client;
-            return 1;
+            return;
       }
       if(listen(client->serverfd, 10)<0){
             delete client;
-            return 1;
+            return;
       }
       
       fd_set readfds;
@@ -725,6 +700,6 @@ int Start(int argc, const char **argv){
       close(client->serverfd);
       delete client;
       stop=false;
-      return 0;
+      return;
       
 }

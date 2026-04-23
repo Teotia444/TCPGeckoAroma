@@ -1,4 +1,9 @@
-#include <thread>
-#include <coreinit/thread.h>
+#ifndef MAIN_H_
+#define MAIN_H_
 
-OSThread* GetMainThread();
+#include "utils/CThread.h"
+
+extern OSThread* mainThread;
+extern CThread* socketThread;
+
+#endif

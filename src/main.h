@@ -1,9 +1,10 @@
 #ifndef MAIN_H_
 #define MAIN_H_
 
+#include "TCPGecko.hpp"
 #include "utils/CThread.h"
 
 extern OSThread* mainThread;
-extern CThread* socketThread;
+extern TCPServer* socketThread;
 
 #endif

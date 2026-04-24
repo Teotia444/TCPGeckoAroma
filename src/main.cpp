@@ -1,5 +1,5 @@
 #include "main.h"
-#include "TCPGecko.h"
+#include "TCPGecko.hpp"
 #include "utils/logger.h"
 
 #include <wups.h>
@@ -16,27 +16,19 @@ WUPS_PLUGIN_AUTHOR("Teotia444");
 WUPS_USE_STORAGE("tcpgecko"); // Unique id for the storage api
 
 OSThread* mainThread = NULL;
-CThread* socketThread = NULL;
+TCPServer* socketThread = NULL;
 
 ON_APPLICATION_START() {
     initLogging();
     DEBUG_FUNCTION_LINE_INFO("TCPGecko Plugin Application start");
     
     mainThread = OSGetCurrentThread();
-
-    socketThread = CThread::create(Start, NULL, OS_THREAD_ATTRIB_AFFINITY_CPU2 | OS_THREAD_ATTRIB_DETACHED);
-    socketThread->executeThread();
+    socketThread = new TCPServer(7332);
 }
 
 ON_APPLICATION_REQUESTS_EXIT(){
-    socketThread->shutdownThread();
+    delete socketThread;
     deinitLogging();
 }
-
-DEINITIALIZE_PLUGIN() {
-    socketThread->shutdownThread();
-    deinitLogging();
-}
-
 
 

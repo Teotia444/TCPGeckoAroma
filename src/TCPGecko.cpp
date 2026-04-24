@@ -7,6 +7,11 @@
 #include <coreinit/cache.h>
 #include <gx2/event.h>
 
+<<<<<<< Updated upstream
+=======
+#include "main.h"
+#include <coreinit/filesystem.h>
+>>>>>>> Stashed changes
 #include <vector>
 #include <string>
 #include <algorithm>

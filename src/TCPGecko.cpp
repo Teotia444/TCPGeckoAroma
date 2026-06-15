@@ -258,7 +258,7 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                         if(args[i] == "-v"){
                               value = args[i+1];
                         }
-                        if(args[i] == "-s"){
+                        if(args[i] == "-k"){
                               kernel = true;
                         }
                   }

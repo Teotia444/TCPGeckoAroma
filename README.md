@@ -4,7 +4,7 @@ A plugin that allows for basic peek / poke instruction. Comes with other set of 
 The plugin is accessible with a TCP socket (hence, the name) at port 7332 and allows for the following commands:
 
 * `peek -t (type: u8, u16, u32, f32) -a (address: 0xXXXXXXXX)` : peeks an address and interprets as requested type
-* `poke -t (type: u8, u16, u32, f32) -a (address: 0xXXXXXXXX) -v (value: 0xXX)` : pokes an address interpreted as the specified type with the specified value
+* `poke -t (type: u8, u16, u32, f32) -a (address: 0xXXXXXXXX) -v (value: 0xXX) -s` : pokes an address interpreted as the specified type with the specified value. -s: sudo mode (allows poking read-only addresses)
 * `peekmultiple -t -a -a -a... ` : peeks multiple values using a single request. They will be separated using the pipe (`|`) operator
 
 * `pokemultiple -t -a -v -a -v -a -v... ` : pokes multiple values using a single request.

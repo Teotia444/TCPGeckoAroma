@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <coreinit/cache.h>
+#include <coreinit/memorymap.h>
 #include <gx2/event.h>
 
 #include <vector>
@@ -14,6 +15,7 @@
 #include <thread>
 
 #include <notifications/notifications.h>
+#include <kernel/kernel.h>
 #include <utils/CThread.h>
 
 //addresses vector for the find command
@@ -51,9 +53,18 @@ uint32_t Peek(uint32_t addr) {
       return val;
 }
 
-void Poke(uint32_t addr, uint32_t val){
+void Poke(uint32_t addr, uint32_t val) {
       //dereference cast of address as pointer then apply value
       *((uint32_t *)(uintptr_t)addr) = val;
+}
+
+void SudoPoke(uint32_t addr, uint32_t val) {
+    uint32_t dst = OSEffectiveToPhysical(addr);
+    uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
+    constexpr uint32_t size = sizeof(val);
+    KernelCopyData(dst, src, size);
+    DCFlushRange((void*)addr, size);
+    ICInvalidateRange((void*)addr, size);
 }
 
 /*
@@ -72,6 +83,15 @@ void Poke16(uint32_t addr, uint16_t val){
       *((uint16_t *)(uintptr_t)addr) = val;
 }
 
+void SudoPoke16(uint32_t addr, uint16_t val) {
+    uint32_t dst = OSEffectiveToPhysical(addr);
+    uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
+    constexpr uint32_t size = sizeof(val);
+    KernelCopyData(dst, src, size);
+    DCFlushRange((void*)addr, size);
+    ICInvalidateRange((void*)addr, size);
+}
+
 uint8_t Peek8(uint32_t addr) {
       //Peek address
       uint32_t val = Peek(addr);
@@ -80,8 +100,17 @@ uint8_t Peek8(uint32_t addr) {
       return result;
 }
 
-void Poke8(uint32_t addr, uint8_t val){
-      *((uint8_t *)(uintptr_t)addr) = val;
+void Poke8(uint32_t addr, uint8_t val) {
+    *((uint8_t *)(uintptr_t)addr) = val;
+}
+
+void SudoPoke8(uint32_t addr, uint8_t val) {
+    uint32_t dst = OSEffectiveToPhysical(addr);
+    uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
+    constexpr uint32_t size = sizeof(val);
+    KernelCopyData(dst, src, size);
+    DCFlushRange((void*)addr, size);
+    ICInvalidateRange((void*)addr, size);
 }
 
 float PeekF32(uint32_t addr) {
@@ -92,6 +121,15 @@ float PeekF32(uint32_t addr) {
 
 void PokeF32(uint32_t addr, float val){
       *((float *)(uintptr_t)addr) = val;
+}
+
+void SudoPokeF32(uint32_t addr, float val) {
+    uint32_t dst = OSEffectiveToPhysical(addr);
+    uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
+    constexpr uint32_t size = sizeof(val);
+    KernelCopyData(dst, src, size);
+    DCFlushRange((void*)addr, size);
+    ICInvalidateRange((void*)addr, size);
 }
 
 #pragma endregion PeekPoke
@@ -206,6 +244,7 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                   std::string address = "";
                   std::string type = "";
                   std::string value = "";
+                  bool sudo = false;
 
                   //gets important informations from the request
                   for (uint i = 0; i < args.size(); i++)
@@ -218,6 +257,9 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                         }
                         if(args[i] == "-v"){
                               value = args[i+1];
+                        }
+                        if(args[i] == "-s"){
+                              sudo = true;
                         }
                   }
 
@@ -259,24 +301,47 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                         valf = *((float*)&num);
                   }
 
-                  //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
-                  if(type=="u8"){
-                        Poke8((uint32_t)strtoul(address.c_str(), NULL, 0), (uint8_t)val);
+                  if(sudo)
+                  {
+                    //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
+                    if(type=="u8"){
+                          SudoPoke8((uint32_t)strtoul(address.c_str(), NULL, 0), (uint8_t)val);
+                    }
+                    else if(type=="u16"){
+                          SudoPoke16((uint32_t)strtoul(address.c_str(), NULL, 0), (uint16_t)val);
+                    }
+                    else if(type=="u32"){
+                          SudoPoke((uint32_t)strtoul(address.c_str(), NULL, 0), (uint32_t)val);
+                    }
+                    else if(type=="f32"){
+                          SudoPokeF32((uint32_t)strtoul(address.c_str(), NULL, 0), valf);
+                    }
+                    else {
+                          const char *message = "Invalid type (-u)\n";
+                          DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", socket->getClientFD(), message);
+                          write(socket->getClientFD(), message, strlen(message));
+                    }
                   }
-                  else if(type=="u16"){
-                        Poke16((uint32_t)strtoul(address.c_str(), NULL, 0), (uint16_t)val);
-                  }
-                  else if(type=="u32"){
-                        Poke((uint32_t)strtoul(address.c_str(), NULL, 0), (uint32_t)val);
-                  }
-                  else if(type=="f32"){
-                        PokeF32((uint32_t)strtoul(address.c_str(), NULL, 0), valf);
-                  }
-                  else {
-                        const char *message = "Invalid type (-u)\n";
-                        DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", socket->getClientFD(), message);
-                        write(socket->getClientFD(), message, strlen(message));
-                        
+                  else
+                  {
+                    //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
+                    if(type=="u8"){
+                          Poke8((uint32_t)strtoul(address.c_str(), NULL, 0), (uint8_t)val);
+                    }
+                    else if(type=="u16"){
+                          Poke16((uint32_t)strtoul(address.c_str(), NULL, 0), (uint16_t)val);
+                    }
+                    else if(type=="u32"){
+                          Poke((uint32_t)strtoul(address.c_str(), NULL, 0), (uint32_t)val);
+                    }
+                    else if(type=="f32"){
+                          PokeF32((uint32_t)strtoul(address.c_str(), NULL, 0), valf);
+                    }
+                    else {
+                          const char *message = "Invalid type (-u)\n";
+                          DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", socket->getClientFD(), message);
+                          write(socket->getClientFD(), message, strlen(message));
+                    }
                   }
 
                   //writes a message to the socket so that the client knows the request has been handled

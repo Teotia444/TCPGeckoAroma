@@ -58,7 +58,7 @@ void Poke(uint32_t addr, uint32_t val) {
       *((uint32_t *)(uintptr_t)addr) = val;
 }
 
-void SudoPoke(uint32_t addr, uint32_t val) {
+void KernelPoke(uint32_t addr, uint32_t val) {
     uint32_t dst = OSEffectiveToPhysical(addr);
     uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
     constexpr uint32_t size = sizeof(val);
@@ -83,7 +83,7 @@ void Poke16(uint32_t addr, uint16_t val){
       *((uint16_t *)(uintptr_t)addr) = val;
 }
 
-void SudoPoke16(uint32_t addr, uint16_t val) {
+void KernelPoke16(uint32_t addr, uint16_t val) {
     uint32_t dst = OSEffectiveToPhysical(addr);
     uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
     constexpr uint32_t size = sizeof(val);
@@ -104,7 +104,7 @@ void Poke8(uint32_t addr, uint8_t val) {
     *((uint8_t *)(uintptr_t)addr) = val;
 }
 
-void SudoPoke8(uint32_t addr, uint8_t val) {
+void KernelPoke8(uint32_t addr, uint8_t val) {
     uint32_t dst = OSEffectiveToPhysical(addr);
     uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
     constexpr uint32_t size = sizeof(val);
@@ -123,7 +123,7 @@ void PokeF32(uint32_t addr, float val){
       *((float *)(uintptr_t)addr) = val;
 }
 
-void SudoPokeF32(uint32_t addr, float val) {
+void KernelPokeF32(uint32_t addr, float val) {
     uint32_t dst = OSEffectiveToPhysical(addr);
     uint32_t src = OSEffectiveToPhysical((uint32_t)&val);
     constexpr uint32_t size = sizeof(val);
@@ -244,7 +244,7 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                   std::string address = "";
                   std::string type = "";
                   std::string value = "";
-                  bool sudo = false;
+                  bool kernel = false;
 
                   //gets important informations from the request
                   for (uint i = 0; i < args.size(); i++)
@@ -259,7 +259,7 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                               value = args[i+1];
                         }
                         if(args[i] == "-s"){
-                              sudo = true;
+                              kernel = true;
                         }
                   }
 
@@ -301,20 +301,20 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                         valf = *((float*)&num);
                   }
 
-                  if(sudo)
+                  if(kernel)
                   {
                     //this can all be simplified to a bitshift depending on the type but we have those functions ready anyway 
                     if(type=="u8"){
-                          SudoPoke8((uint32_t)strtoul(address.c_str(), NULL, 0), (uint8_t)val);
+                          KernelPoke8((uint32_t)strtoul(address.c_str(), NULL, 0), (uint8_t)val);
                     }
                     else if(type=="u16"){
-                          SudoPoke16((uint32_t)strtoul(address.c_str(), NULL, 0), (uint16_t)val);
+                          KernelPoke16((uint32_t)strtoul(address.c_str(), NULL, 0), (uint16_t)val);
                     }
                     else if(type=="u32"){
-                          SudoPoke((uint32_t)strtoul(address.c_str(), NULL, 0), (uint32_t)val);
+                          KernelPoke((uint32_t)strtoul(address.c_str(), NULL, 0), (uint32_t)val);
                     }
                     else if(type=="f32"){
-                          SudoPokeF32((uint32_t)strtoul(address.c_str(), NULL, 0), valf);
+                          KernelPokeF32((uint32_t)strtoul(address.c_str(), NULL, 0), valf);
                     }
                     else {
                           const char *message = "Invalid type (-u)\n";

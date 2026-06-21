@@ -40,9 +40,12 @@ std::vector<std::string> Split(const std::string& s, const std::string& delimite
     }
     tokens.push_back(str);
 
+<<<<<<< Updated upstream
     return tokens;
 }
 
+=======
+>>>>>>> Stashed changes
 #pragma region Peek/Poke
 
 uint32_t Peek(uint32_t addr) {
@@ -274,8 +277,301 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                   }
                   else {
                         const char *message = "Invalid type (-u)\n";
+<<<<<<< Updated upstream
                         DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", socket->getClientFD(), message);
                         write(socket->getClientFD(), message, strlen(message));
+=======
+                        DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+                        write(client, message, strlen(message));
+                        return 0;
+                  }
+            }
+            //writes a message to the socket so that the client knows the request has been handled
+            char const *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+            return 0;
+      }
+
+      else if(instruction == "find"){
+            std::string value = "";
+            std::string step = "";
+            
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-s"){
+                        step = args[i+1];
+                  }
+                  if(args[i] == "-v"){
+                        value = args[i+1];
+                  }
+            }
+            
+            
+            if(step == "first"){
+                  uint32_t val;
+                  val = std::strtol(value.c_str(), NULL, 0);
+                  StartFindValue32(val);
+            }
+            else if (step == "next"){
+                  uint32_t val;
+                  val = std::strtol(value.c_str(), NULL, 0);
+                  ContinueFindValue32(val);
+            }
+            //if we dont recognize the step we just print out the array
+            else{
+                  for (uint32_t i = 0; i < potentialAddresses.size(); i++)
+                  {
+                        char const *message = (std::to_string(potentialAddresses[i]) + "\n").c_str();
+                        DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+                        write(client, message, strlen(message));
+                  }
+                  return 0;
+            }
+            //writes a message to the socket so that the client knows the request has been handled
+            char const *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+            return 0;
+      }
+      
+      else if(instruction == "pause"){
+            //writes a message to the socket so that the client knows the request has been handled
+            const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+
+            //suspend the main thread
+            OSThread* maint = GetMainThread();
+            OSSuspendThread(maint);
+            return 0;
+      }
+
+      else if(instruction == "advance"){
+            const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+
+            OSThread* maint = GetMainThread();
+            //for some reasons the OSSleepTicks work weirdly, this is very hacky and it just so happens that resuming
+            //thread twice advances by a frame? idk
+            OSResumeThread(maint);
+            OSSleepTicks(OSTime(1000));
+            OSSuspendThread(maint);
+
+            OSResumeThread(maint);
+            OSSleepTicks(OSTime(1000));
+            OSSuspendThread(maint);
+
+            return 0;
+      }
+      
+      else if(instruction == "resume"){
+            const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+
+            //resumes the main thread
+            OSThread* maint = GetMainThread();
+            OSResumeThread(maint);
+            return 0;
+      }
+      
+      else if(instruction == "call"){
+            std::string addr = "";
+            
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-a"){
+                        addr = args[i+1];
+                  }
+            }
+
+            uint32_t val;
+            val = std::strtol(addr.c_str(), NULL, 0);
+            Call(val);
+            const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+            return 0;
+      }
+      
+      else if(instruction == "drawtext"){
+            std::string text = "";
+            uint8_t r = 0;
+            uint8_t g = 0;
+            uint8_t b = 0;
+            uint8_t a = 0;
+
+            //gets important informations from the request
+            for (uint i = 0; i < args.size(); i++)
+            {
+                  if(args[i] == "-text"){
+                        int j = i + 1;
+                        text += args[j];
+                        text.erase(0, 1);
+
+                        if(args[j].back() != ')'){
+                              j++;
+                              while(args[j].back() != ')' && j < args.size()){
+                                    text += " ";
+                                    text += args[j];
+                                    j++;
+                              }
+                              text += " ";
+                              text += args[j];
+                        }
+
+                        text.pop_back();
+                  }
+
+                  if(args[i] == "-r"){
+                        r = std::stoi(args[i+1]);
+                  }
+                  if(args[i] == "-g"){
+                        g = std::stoi(args[i+1]);
+                  }
+                  if(args[i] == "-b"){
+                        b = std::stoi(args[i+1]);
+                  }
+                  if(args[i] == "-a"){
+                        a = std::stoi(args[i+1]);
+                  }
+            }
+
+            NotificationModule_UpdateDynamicNotificationText(currentText, text.c_str());
+            NotificationModule_UpdateDynamicNotificationTextColor(currentText, _NMColor{.r = r, .g = g, .b = b, .a = a});
+            
+            if(a == 0 || text == "" || (a == 2 && r == 0 && g == 0 && b == 255)){
+                  NotificationModule_UpdateDynamicNotificationText(currentText, ".");
+                  NotificationModule_UpdateDynamicNotificationTextColor(currentText, _NMColor{255, 0, 0, 2});
+            }
+            
+            const char *message = "ok\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+            return 0;
+      }
+
+      else{
+            const char *message = "Invalid Instruction. You need to use either of the following instructions : \npeek -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) \npoke -t (type:u8, u16, u32, f32) -a (address:0xFFFFFFFF) -v (value:0xFF)\nfind -s (step:first, next, list) -v (value:0xFF)\npause (pauses the main wiiu thread execution)\nresume (resumes the main wiiu thread)\nadvance (advances the wiiu thread by 1 frame)\n";
+            DEBUG_FUNCTION_LINE_INFO("Writing to client %d: %s", client, message);
+            write(client, message, strlen(message));
+            return 0;
+      }
+}
+
+int Start(std::stop_token token){
+      DEBUG_FUNCTION_LINE_INFO("Starting TCPGecko Socket");
+      NotificationModule_InitLibrary();
+      if (NotificationModule_AddDynamicNotificationEx(".", &currentText, {0, 0, 255, 2}, {255, 255, 255, 0}, nullptr, nullptr, false) != NOTIFICATION_MODULE_RESULT_SUCCESS) {
+            currentText = 0;
+      }
+
+      auto client = new clientDetails();
+
+      //init server socket
+      client->serverfd = socket(AF_INET, SOCK_STREAM, 0);
+      if(client->serverfd <= 0){
+            delete client;
+            return 1;
+      }
+
+
+      int opt=1;
+      if(setsockopt(client->serverfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof opt) <0){
+            delete client;
+            return 1;
+      }
+
+      struct sockaddr_in serverAddr;
+      serverAddr.sin_family = AF_INET;
+      serverAddr.sin_port = htons(7332);
+      serverAddr.sin_addr.s_addr = INADDR_ANY;
+
+      if(bind(client->serverfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr))<0){
+            delete client;
+            return 1;
+      }
+      if(listen(client->serverfd, 10)<0){
+            delete client;
+            return 1;
+      }
+      
+      fd_set readfds;
+      size_t  valread;
+      int maxfd;
+      int sd=0;
+      int activity;
+      struct timeval timeout = {1, 0};
+
+      DEBUG_FUNCTION_LINE_INFO("Listening for connections on port 7332");
+      while (!token.stop_requested()){
+            FD_ZERO(&readfds);
+            FD_SET(client->serverfd, &readfds);
+            maxfd=client->serverfd;
+
+            //copying the client list to readfds
+            //so that we can listen to all the client
+            for(auto sd:client->clientList){
+                  FD_SET(sd, &readfds);
+                  if (sd>maxfd){
+                        maxfd=sd;
+                  }
+            }
+            if (sd>maxfd){
+                  maxfd=sd;
+            }
+
+            activity=select(maxfd+1, &readfds, NULL, NULL, &timeout);
+            if (activity<=0){
+                  continue;
+            }
+
+            /*
+              if something happen on client->serverfd then it means its
+              new connection request
+             */
+            if (FD_ISSET(client->serverfd, &readfds)) {
+                  client->clientfd = accept(client->serverfd, (struct sockaddr *) NULL, NULL);
+                  if (client->clientfd < 0) {
+                        continue;
+                  }
+                  
+                  //adding client to list
+                  NotificationModule_UpdateDynamicNotificationTextColor(currentText, {255, 255, 255, 2});
+                  client->clientList.push_back(client->clientfd);
+                  //NotificationModule_UpdateDynamicNotificationText(*currentText, "text.c_str()");
+                  
+                  
+            }
+
+            //for storing the recive message
+            char message[1024];
+            for(uint i=0;i<client->clientList.size();++i){
+                  sd=client->clientList[i];
+                  if (FD_ISSET(sd, &readfds)){
+                        valread=read(sd, message, 1024);
+                        //check if client disconnected
+                        if (valread==0){
+                              close(sd);
+                              //remove the client from the list 
+                              client->clientList.erase(client->clientList.begin()+i);
+                              NotificationModule_UpdateDynamicNotificationText(currentText, ".");
+                              NotificationModule_UpdateDynamicNotificationTextColor(currentText, {255, 255, 255, 2});
+                              if(client->clientList.size() == 0){
+                                    NotificationModule_UpdateDynamicNotificationTextColor(currentText, {0, 0, 255, 2});
+                              }
+                              //NotificationModule_AddInfoNotification("client disconnected");
+                        }else{
+                              std::jthread t1(Commands, client->clientList[i], (std::string)message);
+                              OSSetThreadAffinity((OSThread *)t1.native_handle(), OS_THREAD_ATTRIB_AFFINITY_CPU2);
+                              t1.detach();
+                        }
+                        memset(message, 0, 1024);
+>>>>>>> Stashed changes
                         
                   }
 
@@ -589,6 +885,12 @@ int Commands(TCPServer* socket, std::stop_token stop_token){
                   write(socket->getClientFD(), message, strlen(message));
             }
       }
+<<<<<<< Updated upstream
+=======
+      
+      close(client->serverfd);
+      delete client;
+>>>>>>> Stashed changes
       return 0;
 }
 
